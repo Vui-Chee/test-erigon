@@ -372,7 +372,7 @@ func (c *StreamClient) GetHeader() (*types.HeaderEntry, error) {
 
 	// Read server result entry for the command
 	if _, err := c.readResultEntry(packet); err != nil {
-		return nil, fmt.Errorf("readResultEntry: %w", err)
+		return nil, fmt.Errorf("readResultEntry: %w", err) // NOTE "client already started" warning
 	}
 
 	// Read header entry
@@ -479,8 +479,8 @@ func (c *StreamClient) ReadAllEntriesToChannel() (err error) {
 			if err = c.readAllEntriesToChannel(); err == nil {
 				break
 			}
-      // Do not terminate loop on certain errors.
-			if !(errors.Is(err, ErrSocket) || errors.Is(err, ErrInvalidBookmark) || errors.Is(err, ErrUnexpectedL2Transaction)) {
+			// Do not terminate loop on certain errors.
+			if !(errors.Is(err, ErrSocket) || errors.Is(err, ErrIntiateBookmark) || errors.Is(err, ErrUnexpectedL2Transaction)) {
 				return fmt.Errorf("readAllEntriesToChannel: %w", err)
 			}
 		}
@@ -546,14 +546,14 @@ func (c *StreamClient) readAllEntriesToChannel() (err error) {
 func (c *StreamClient) initiateDownloadBookmark(bookmark []byte) (*types.ResultEntry, error) {
 	// send CmdStartBookmark command
 	if err := c.sendBookmarkCmd(bookmark, true); err != nil {
-		return nil, fmt.Errorf("sendBookmarkCmd: %w", err)
+		return nil, fmt.Errorf("sendBookmarkCmd: (%w:%w)", ErrIntiateBookmark, err)
 	}
 
 	c.setStreaming(true)
 
 	re, err := c.afterStartCommand()
 	if err != nil {
-		return re, fmt.Errorf("afterStartCommand: %w", err)
+		return re, fmt.Errorf("afterStartCommand: (%w:%w)", ErrIntiateBookmark, err)
 	}
 
 	return re, nil
@@ -774,7 +774,7 @@ func ReadParsedProto(iterator FileEntryIterator) (
 		}
 		return
 	case types.EntryTypeL2Tx:
-		err = errors.New("unexpected L2 tx entry, found outside of block")
+		err = fmt.Errorf("(%w:%w)", ErrUnexpectedL2Transaction, errors.New("unexpected L2 tx entry, found outside of block"))
 	default:
 		err = fmt.Errorf("unexpected entry type: %d", file.EntryType)
 	}

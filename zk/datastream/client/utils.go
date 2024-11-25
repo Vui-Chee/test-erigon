@@ -11,7 +11,7 @@ import (
 var (
 	ErrSocket                  = errors.New("socket error")
 	ErrNilConnection           = errors.New("nil connection")
-	ErrInvalidBookmark         = errors.New("invalid bookmark")
+	ErrIntiateBookmark         = errors.New("problem initiating bookmark")
 	ErrUnexpectedL2Transaction = errors.New("unexpected L2 transaction")
 )
 
