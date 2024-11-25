@@ -147,6 +147,9 @@ func (p *BatchesProcessor) ProcessEntry(entry interface{}) (endLoop bool, err er
 		return p.processFullBlock(entry)
 	case *types.GerUpdate:
 		return false, p.processGerUpdate(entry)
+	case *types.L2BlockEndProto:
+		log.Warn(fmt.Sprintf("ProcessEntry: received L2BlockEndProto %v.", entry))
+		return true, fmt.Errorf("Received L2BlockEndProto %v. Stopping stage.", entry)
 	case nil: // we use nil to indicate the end of stream read
 		return true, nil
 	default:

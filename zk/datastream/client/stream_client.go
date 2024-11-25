@@ -479,7 +479,8 @@ func (c *StreamClient) ReadAllEntriesToChannel() (err error) {
 			if err = c.readAllEntriesToChannel(); err == nil {
 				break
 			}
-			if !errors.Is(err, ErrSocket) {
+      // Do not terminate loop on certain errors.
+			if !(errors.Is(err, ErrSocket) || errors.Is(err, ErrInvalidBookmark) || errors.Is(err, ErrUnexpectedL2Transaction)) {
 				return fmt.Errorf("readAllEntriesToChannel: %w", err)
 			}
 		}
@@ -610,6 +611,8 @@ LOOP:
 		case *types.FullL2Block:
 			parsedProto.ForkId = c.currentFork
 			log.Trace("[Datastream client] writing block to channel", "blockNumber", parsedProto.L2BlockNumber, "batchNumber", parsedProto.BatchNumber)
+		case *types.L2BlockEndProto:
+			log.Warn("After ReadParsedProto: received L2BlockEndProto.")
 		default:
 			return fmt.Errorf("unexpected entry type: %v", parsedProto)
 		}

@@ -9,8 +9,10 @@ import (
 )
 
 var (
-	ErrSocket        = errors.New("socket error")
-	ErrNilConnection = errors.New("nil connection")
+	ErrSocket                  = errors.New("socket error")
+	ErrNilConnection           = errors.New("nil connection")
+	ErrInvalidBookmark         = errors.New("invalid bookmark")
+	ErrUnexpectedL2Transaction = errors.New("unexpected L2 transaction")
 )
 
 func writeFullUint64ToConn(conn net.Conn, value uint64) error {
