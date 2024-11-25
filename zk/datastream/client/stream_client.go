@@ -774,7 +774,7 @@ func ReadParsedProto(iterator FileEntryIterator) (
 		}
 		return
 	case types.EntryTypeL2Tx:
-		err = fmt.Errorf("(%w:%w)", ErrUnexpectedL2Transaction, errors.New("unexpected L2 tx entry, found outside of block"))
+		err = fmt.Errorf("(%w:%w)", ErrUnexpectedL2Transaction, errors.New("found outside of block"))
 	default:
 		err = fmt.Errorf("unexpected entry type: %d", file.EntryType)
 	}
