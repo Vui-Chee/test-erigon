@@ -480,7 +480,7 @@ func (c *StreamClient) ReadAllEntriesToChannel() (err error) {
 				break
 			}
 			// Do not terminate loop on certain errors.
-			if !(errors.Is(err, ErrSocket) || errors.Is(err, ErrIntiateBookmark) || errors.Is(err, ErrUnexpectedL2Transaction)) {
+			if !errors.Is(err, ErrSocket) {
 				return fmt.Errorf("readAllEntriesToChannel: %w", err)
 			}
 		}
@@ -546,14 +546,14 @@ func (c *StreamClient) readAllEntriesToChannel() (err error) {
 func (c *StreamClient) initiateDownloadBookmark(bookmark []byte) (*types.ResultEntry, error) {
 	// send CmdStartBookmark command
 	if err := c.sendBookmarkCmd(bookmark, true); err != nil {
-		return nil, fmt.Errorf("sendBookmarkCmd: (%w:%w)", ErrIntiateBookmark, err)
+		return nil, fmt.Errorf("sendBookmarkCmd: :%w", err)
 	}
 
 	c.setStreaming(true)
 
 	re, err := c.afterStartCommand()
 	if err != nil {
-		return re, fmt.Errorf("afterStartCommand: (%w:%w)", ErrIntiateBookmark, err)
+		return re, fmt.Errorf("afterStartCommand: %w", err)
 	}
 
 	return re, nil
@@ -774,7 +774,7 @@ func ReadParsedProto(iterator FileEntryIterator) (
 		}
 		return
 	case types.EntryTypeL2Tx:
-		err = fmt.Errorf("(%w:%w)", ErrUnexpectedL2Transaction, errors.New("found outside of block"))
+		err = errors.New("unexpected L2 tx entry, found outside of block")
 	default:
 		err = fmt.Errorf("unexpected entry type: %d", file.EntryType)
 	}

@@ -22,7 +22,7 @@ func NewDatastreamClientRunner(dsClient DatastreamClient, logPrefix string) *Dat
 	}
 }
 
-func (r *DatastreamClientRunner) StartRead() error {
+func (r *DatastreamClientRunner) StartRead(errCh chan error) error {
 	r.dsClient.RenewEntryChannel()
 	if r.isReading.Load() {
 		return fmt.Errorf("tried starting datastream client runner thread while another is running")
@@ -40,6 +40,7 @@ func (r *DatastreamClientRunner) StartRead() error {
 		defer r.isReading.Store(false)
 
 		if err := r.dsClient.ReadAllEntriesToChannel(); err != nil {
+      errCh <- err
 			log.Warn(fmt.Sprintf("[%s] Error downloading blocks from datastream", r.logPrefix), "error", err)
 		}
 	}()

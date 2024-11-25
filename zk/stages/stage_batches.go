@@ -260,7 +260,8 @@ func SpawnStageBatches(
 
 	// start routine to download blocks and push them in a channel
 	dsClientRunner := NewDatastreamClientRunner(dsQueryClient, logPrefix)
-	dsClientRunner.StartRead()
+	errCh := make(chan error, 1)
+	dsClientRunner.StartRead(errCh)
 	defer dsClientRunner.StopRead()
 
 	entryChan := dsQueryClient.GetEntryChan()
@@ -275,6 +276,9 @@ func SpawnStageBatches(
 		// if download routine finished, should continue to read from channel until it's empty
 		// if both download routine stopped and channel empty - stop loop
 		select {
+		case err := <-errCh:
+			log.Warn("Received error when reading from data streamer: %w", err)
+			endLoop = true
 		case entry := <-*entryChan:
 			if endLoop, err = batchProcessor.ProcessEntry(entry); err != nil {
 				// if we triggered an unwind somewhere we need to return from the stage
