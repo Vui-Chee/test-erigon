@@ -611,7 +611,7 @@ func (c *StreamClient) HandleStart() error {
 	}
 
 	if c.lastError != nil {
-		log.Info("[Datastream client] Last error detected, trying to reconnect")
+		log.Warn("[Datastream client] Last error detected, trying to reconnect", "error", c.lastError)
 		// we had an error last time, so try to reconnect
 		if err := c.tryReConnect(); err != nil {
 			return err
