@@ -5,28 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sync/atomic"
-	"time"
 	"os"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
 
+	"github.com/ledgerwatch/erigon/core/rawdb"
+	"github.com/ledgerwatch/erigon/core/state"
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/zk"
+	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
-	"github.com/ledgerwatch/erigon/core/rawdb"
-	"github.com/ledgerwatch/erigon/core/state"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -137,7 +137,9 @@ func SpawnStageBatches(
 		freshTx = true
 		log.Debug(fmt.Sprintf("[%s] batches: no tx provided, creating a new one", logPrefix))
 		var err error
+		log.Info("[spawn stage batches] begin reading from DB.")
 		tx, err = cfg.db.BeginRw(ctx)
+		log.Info("[spawn stage batches] after read from DB.")
 		if err != nil {
 			return fmt.Errorf("cfg.db.BeginRw, %w", err)
 		}
@@ -147,10 +149,12 @@ func SpawnStageBatches(
 	eriDb := erigon_db.NewErigonDb(tx)
 	hermezDb := hermez_db.NewHermezDb(tx)
 
+	log.Info("[spawn stage batches] Before get stage progress")
 	stageProgressBlockNo, err := stages.GetStageProgress(tx, stages.Batches)
 	if err != nil {
 		return fmt.Errorf("GetStageProgress: %w", err)
 	}
+	log.Info("[spawn stage batches] After got stage progress", "stage", stageProgressBlockNo)
 
 	//// BISECT ////
 	if cfg.zkCfg.DebugLimit > 0 {
@@ -176,10 +180,12 @@ func SpawnStageBatches(
 	}
 
 	// get batch for batches progress
+	log.Info("[spawn stage batches] before get batch by L2 block")
 	stageProgressBatchNo, err := hermezDb.GetBatchNoByL2Block(stageProgressBlockNo)
 	if err != nil && !errors.Is(err, hermez_db.ErrorNotStored) {
 		return fmt.Errorf("GetBatchNoByL2Block: %w", err)
 	}
+	log.Info("[spawn stage batches] after get batch by L2 block")
 
 	startSyncTime := time.Now()
 
@@ -201,6 +207,7 @@ func SpawnStageBatches(
 
 	var highestDSL2Block uint64
 	newBlockCheckStartTIme := time.Now()
+	log.Info("[spawn stage batches] before get highestDSL2Block loop")
 	for {
 		select {
 		case <-ctx.Done():
@@ -208,6 +215,7 @@ func SpawnStageBatches(
 		default:
 		}
 
+		// NOTE: This calls sequencer RPC directly
 		highestDSL2Block, err = getHighestDSL2Block(ctx, cfg, uint16(latestForkId))
 		if err != nil {
 			// if we return error, stage will replay and block all other stages
@@ -230,6 +238,7 @@ func SpawnStageBatches(
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+	log.Info("[spawn stage batches] after get highestDSL2Block loop")
 
 	log.Debug(fmt.Sprintf("[%s] Highest block in db and datastream", logPrefix), "datastreamBlock", highestDSL2Block, "dbBlock", stageProgressBlockNo)
 	unwindFn := func(unwindBlock uint64) (uint64, error) {
